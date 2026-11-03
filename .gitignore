@@ -1,8 +1,5 @@
 __pycache__/
+*.pyc
 .venv/
-source.html
-source.js
-vendors.js
-line.js
-route.json
-buses.json
+.ppt-build/
+output/

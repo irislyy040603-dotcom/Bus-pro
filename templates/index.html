@@ -1,7 +1,111 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>701X · 澳门巴士</title><link rel="stylesheet" href="/static/style.css"><script src="/static/app.js" defer></script></head>
-<body><header><a href="/" class="brand">▤ 澳门巴士 <span>MACAU BUS</span></a><span class="project">课程项目 · 实时路线查询</span></header>
-<main><section class="hero"><div><p class="eyebrow">路线实时看板 / LIVE ROUTE</p><h1>701X <span>循环路线</span></h1><h2>澳門大學總站 <span>→</span> 澳門大學總站</h2><p class="subtitle">经横琴澳方口岸 · 路氹城</p></div><div class="route-symbol" aria-hidden="true">↻</div></section>
-<section class="stats"><div><span>全线站点</span><strong id="count">—</strong></div><div><span>当前接口车辆数</span><strong id="vehicles">—</strong></div><div><span>最后成功采集 · 澳门时间</span><strong class="time" id="updated">尚未获取</strong></div></section>
-<section class="board"><div class="toolbar"><div><h2>沿途站点</h2><p>车辆显示在官方数据关联的站点，不代表精确 GPS 位置。</p></div><button id="refresh">刷新数据 ↻</button></div><div class="notice" id="status" role="status" aria-live="polite">正在获取官方数据…</div><ol id="stops"></ol></section>
-<footer>数据来源：<a href="https://bis.dsat.gov.mo:37812/macauweb/index.html" target="_blank" rel="noopener">澳门交通事务局 · 巴士报站</a><p>每 30 秒尝试更新 · 仅供课程展示，实际运营以官方信息为准</p></footer></main></body></html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>102 · 澳门巴士路线追踪</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <link rel="stylesheet" href="/static/vendor/leaflet.css" />
+    <script src="/static/vendor/leaflet.js" defer></script>
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <div class="brand">🚌 MACAU BUS <small> / Student Project</small></div>
+      <small>102 ROUTE TRACKER</small>
+    </header>
+    <main class="wrap">
+      <div class="head">
+        <div>
+          <span class="number">102</span
+          ><span class="title" id="direction-title">正在获取路线…</span>
+          <div class="sub">
+            <span id="count">—</span> 个站点 · <span id="vehicles">—</span> 辆车
+            · 澳门时间 <span id="updated">—</span>
+          </div>
+        </div>
+        <div class="control">
+          <button id="switch-direction">⇄ 切换方向</button
+          ><button class="primary" id="refresh">↻ 手动刷新</button>
+        </div>
+      </div>
+      <div id="status" class="notice" role="status">正在获取官方数据…</div>
+      <div class="grid">
+        <section class="card route-card">
+          <h2>📍 巴士路线 · 选择候车站点</h2>
+          <div class="control">
+            <label for="station">我的候车站：</label
+            ><select id="station"></select>
+          </div>
+          <div class="metric">
+            <div class="arrival" id="arrival" aria-live="polite">
+              正在获取车辆信息…
+            </div>
+            <!-- <small>按官方车辆关联站点估算剩余站数，非到站时间预测。</small> -->
+          </div>
+          <p class="muted">点击站名查看官方站点实景照片。</p>
+          <ol class="route" id="stops"></ol>
+        </section>
+        <aside>
+          <section
+            class="card map-card"
+            id="map-card"
+            style="margin-bottom: 20px"
+          >
+            <div class="map-heading">
+              <h2>🗺️ 当前方向路线地图</h2>
+              <button id="full-map">⛶ 全图</button>
+            </div>
+            <div class="map" id="map"></div>
+            <!-- <p id="map-note" class="muted">
+              绿色为实际路线；点击地图空白处打开全图。
+            </p> -->
+            <div class="buttons">
+              <button id="fit-route">显示全线</button
+              ><button id="map-refresh">↻ 刷新</button>
+            </div>
+          </section>
+          <section class="card">
+            <h2>🕒 官方发布的班次时间</h2>
+            <div id="schedule">
+<p class="muted">两个方向班次相同 · 首班 06:00，末班 00:00（次日零时）</p>
+<table class="schedule-table"><caption>星期一至星期五（公众假期除外）</caption><thead><tr><th scope="col">发车时段</th><th scope="col">班次间隔</th></tr></thead><tbody><tr><td>06:00–07:00</td><td>14–20 分钟</td></tr><tr><td>07:00–15:00</td><td>12–18 分钟</td></tr><tr><td>15:00–00:00</td><td>15–20 分钟</td></tr></tbody></table>
+<table class="schedule-table"><caption>星期六、星期日及公众假期</caption><thead><tr><th scope="col">发车时段</th><th scope="col">班次间隔</th></tr></thead><tbody><tr><td>06:00–07:00</td><td>14–20 分钟</td></tr><tr><td>07:00–09:00</td><td>12–18 分钟</td></tr><tr><td>09:00–19:00</td><td>8–18 分钟</td></tr><tr><td>19:00–00:00</td><td>15–20 分钟</td></tr></tbody></table>
+<!-- <p class="muted">按交通事务局 102 官方路线表录入，原表日期：2026-09-19。固定资料，调整以官方公告为准。</p> -->
+<p class="muted">台风期间，末班车于八号风球悬挂前20分钟发出。</p>
+</div>
+            <!-- <p class="muted">班次间隔不是车辆准确到站时刻。</p> -->
+            <a
+              href="https://www.dsat.gov.mo/bus/site/route_display.aspx?route=busroute_102"
+              target="_blank"
+              rel="noopener"
+              >官方路线资料 ↗</a
+            >
+          </section>
+        </aside>
+      </div>
+      <footer>
+        资料来源：<a
+          id="source-title"
+          href="https://bis.dsat.gov.mo:37812/macauweb/index.html"
+          target="_blank"
+          rel="noopener"
+          >澳门交通事务局 · 巴士报站</a
+        >
+        <p id="source-status"></p>
+        每10秒尝试刷新 · 官方站点照片非实时直播 · 仅供课程展示
+      </footer>
+    </main>
+    <dialog id="photo-dialog">
+      <button id="close-photo" style="float: right" aria-label="关闭照片">
+        ✕
+      </button>
+      <h2 id="photo-title"></h2>
+      <p id="photo-status"></p>
+      <img id="station-photo" alt="官方站点实景照片" />
+      <!-- <p>
+        <a id="photo-source" target="_blank" rel="noopener">查看官方原图 ↗</a>
+      </p> -->
+    </dialog>
+  </body>
+</html>
